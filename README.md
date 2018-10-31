@@ -1,8 +1,10 @@
+#### This is a fork from the original founders and coders repo, to use fetch instead of XHR requests in the solution
+
 # workshop-APIs
 
 In this workshop we'll build on things we've learnt so far by using the GitHub API in order to practise:
 - Making HTTP Get requests on the client side
-- Callbacks
+- Using the Fetch api
 - Working with large amounts of JSON-formatted data
 - DOM manipulation
 
