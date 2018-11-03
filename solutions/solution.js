@@ -1,20 +1,23 @@
-var githubHandle = "emilyb7";
+var githubHandle = "m4v15";
 
 /* helper functions */
 
 function getLanguages(arr) {
   return arr
-    .map(function(obj) {
+    .map(function (obj) {
       return obj.language;
     })
-    .reduce(function(a, b) {
-      return a.concat(!!b && a.indexOf(b) < 0 ? [b] : []);
+    .reduce(function (languageList, currentLanguage) {
+      if (currentLanguage && !languageList.includes(currentLanguage)) {
+        return languageList.concat([currentLanguage])
+      }
+      return languageList
     }, []);
 }
 
 function countStars(arr) {
-  return arr.reduce(function(a, b) {
-    return a + b.stargazers_count;
+  return arr.reduce(function (acc, current) {
+    return acc + current.stargazers_count;
   }, 0);
 }
 
@@ -22,10 +25,9 @@ function getUsername(user) {
   return user.login;
 }
 
-/* success handlers - functions that get used directly in the callback */
+/* success handlers - functions that get used with the response from the request */
 
-function success_userDetails(json) {
-  var response = JSON.parse(json);
+function extractUserDetails(response) {
   return {
     userDetails: {
       img: response[0].owner.avatar_url,
@@ -45,86 +47,84 @@ function success_userDetails(json) {
   };
 }
 
-function success_contributorDetails(obj, json) {
-  var response = JSON.parse(json);
+function extractContributorDetails(response) {
   var contributors = response.map(getUsername);
-  var firstRepo = Object.assign({}, obj.firstRepo, {
-    contributors: contributors
-  });
-  return Object.assign({}, obj, { firstRepo: firstRepo });
+  return contributors;
 }
 
 /* generic request function, can be recycled over and over! */
 
 function request(url, cb) {
-  var xhr = new XMLHttpRequest();
-  xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4) {
-      if (xhr.status === 200) {
-        cb(null, xhr.responseText);
-      } else {
-        // if the API returns an error, pass the error into the callback as the first argument
-        var errorMessage = xhr.responseText;
-        cb("Error " + url + " " + errorMessage);
-      }
-    }
-  };
-  xhr.open("GET", url, true);
-  xhr.send();
+  fetch(url)
+    .then(function (response) {
+      return response.json()
+    })
+    .then(function (result) {
+      return cb(result)
+    }).catch(function (err) {
+      return console.log(err)
+    })
+
 }
 
-/* getUserRepoDetails calls success_userDetails, passing it the results from the XHR request, and then passes the results from success_userDetails into getContributors */
+/* getUserRepoDetails calls extractUserDetails, passing it the results from the fetch request, and then passes the results from extractUserDetails into updateDOMWithUserDetails and also into getContributorsToFirstRepo */
 
 function getUserRepoDetails(handle) {
   var url = "https://api.github.com/users/" + handle + "/repos";
-  request(url, function(error, result) {
-    if (error) {
-      console.log(error);
-      return;
-    }
-    getContributors(success_userDetails(result));
+  request(url, function (result) {
+    const formattedUserDetails = extractUserDetails(result)
+
+    updateDOMWithUserDetails(formattedUserDetails)
+
+    getContributorsToFirstRepo(formattedUserDetails);
     return;
   });
 }
 
-/* getContributors passes the user's first repo URL into the XHR request, passing the results into success_contributorDetails, which in turn passes its results into updateDOM */
+/* getContributorsToFirstRepo passes the user's first repo URL into the fetch request, passing the results into extractContributorDetails, which in turn passes its results into updateDOMWithContributors */
 
-function getContributors(details) {
-  var url = details.firstRepo.contributors_url;
-  request(url, function(error, result) {
-    if (error) {
-      console.log(error);
-      return;
-    }
-    updateDOM(success_contributorDetails(details, result));
+function getContributorsToFirstRepo(userDetails) {
+  var url = userDetails.firstRepo.contributors_url;
+  request(url, function (result) {
+    var contributors = extractContributorDetails(result);
+    updateDOMWithContributors(contributors)
     return;
   });
 }
-/*finally - updateDOM updates the HTML details in one fell swoop, using all of the processed details retrieved from github */
-function updateDOM(obj) {
+
+/* UPDATE DOM FUNCTIONS
+updateDOMWithUserDetails updates the HTML with the user's details as extracted from the first fetch */
+function updateDOMWithUserDetails(userDetails) {
   document.getElementById("github-user-handle").textContent = githubHandle;
   document.getElementById("github-user-link").href =
     "https://github.com/" + githubHandle;
-  document.getElementById("github-user-avatar").src = obj.userDetails.img;
+  document.getElementById("github-user-avatar").src = userDetails.userDetails.img;
   document.getElementById("github-user-repos").textContent =
-    obj.userDetails.repos;
+    userDetails.userDetails.repos;
   document.getElementById(
     "github-repos-languages"
-  ).textContent = obj.userDetails.languages.join(", ");
+  ).textContent = userDetails.userDetails.languages.join(", ");
   document.getElementById("github-repos-stars").textContent =
-    obj.userDetails.stars;
-  document.getElementById("github-repo-name").textContent = obj.firstRepo.name;
-  document.getElementById("github-repo-link").href = obj.firstRepo.url;
+    userDetails.userDetails.stars;
+  document.getElementById("github-repo-name").textContent = userDetails.firstRepo.name;
+  document.getElementById("github-repo-link").href = userDetails.firstRepo.url;
   document.getElementById("github-repo-created").textContent =
-    obj.firstRepo.created;
+    userDetails.firstRepo.created;
   document.getElementById("github-repo-open-issues").textContent =
-    obj.firstRepo.issues;
+    userDetails.firstRepo.issues;
   document.getElementById("github-repo-watchers").textContent =
-    obj.firstRepo.watchers;
-  document.getElementById(
-    "github-repo-contributors"
-  ).textContent = obj.firstRepo.contributors.join(", ");
+    userDetails.firstRepo.watchers;
   return;
 }
 
+/*updateDOMWithContributors updates the HTML with the contributors' details as extracted from the second fetch */
+
+function updateDOMWithContributors(contributors) {
+  document.getElementById(
+    "github-repo-contributors"
+  ).textContent = contributors.join(", ");
+  return;
+}
+
+// This is calls the first request, setting of the chain of events to populate the page
 getUserRepoDetails(githubHandle);
