@@ -11,9 +11,6 @@ In this workshop we'll build on things we've learnt so far by using the GitHub A
 **Mentors** see [notes.md](https://github.com/emilyb7/workshop-APIs/blob/master/notes.md).
 
 ## Remember
-
-We are using browser-friendly, vanilla JavaScript. No promises, and no ES6 syntax!
-
 Pair programme!
 
 
@@ -69,7 +66,7 @@ Try and at least come up with an **idea** of how you might do this. It will be v
 
 What other data might you want your application to show and what API calls would you need to make?
 
-Does the structure of your code (after challenge 1.0) allow for you to easily accommodate these changes?
+Do the structure of your code (after challenge 1.0) allow for you to easily accommodate these changes?
 
 What problems can you foresee?
 
